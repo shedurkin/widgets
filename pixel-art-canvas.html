@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Art Canvas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: transparent;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8px;
+    }
+
+    .container {
+      background: rgb(247, 247, 245);
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      color: rgb(55, 53, 47);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .tools {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tool-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(55, 53, 47, 0.06);
+      color: rgb(55, 53, 47);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .tool-btn:hover {
+      background: rgba(55, 53, 47, 0.1);
+    }
+
+    .tool-btn.active {
+      background: rgb(35, 131, 226);
+      color: #fff;
+    }
+
+    .canvas-wrapper {
+      background: rgb(255, 255, 255);
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(55, 53, 47, 0.09);
+    }
+
+    #pixelCanvas {
+      display: grid;
+      gap: 1px;
+      background: rgba(55, 53, 47, 0.09);
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: crosshair;
+      width: 100%;
+      aspect-ratio: 1;
+    }
+
+    .pixel {
+      width: 100%;
+      aspect-ratio: 1;
+      background: rgb(255, 255, 255);
+      transition: background-color 0.08s ease;
+    }
+
+    .pixel:hover {
+      opacity: 0.85;
+    }
+
+    .color-section {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .palette {
+      display: flex;
+      gap: 3px;
+      flex-wrap: nowrap;
+    }
+
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 2px solid transparent;
+      flex-shrink: 0;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .color-swatch.active {
+      border-color: rgb(35, 131, 226);
+      box-shadow: 0 0 0 1px rgb(35, 131, 226);
+    }
+
+    .color-swatch.light-color.active {
+      border-color: rgb(55, 53, 47);
+      box-shadow: 0 0 0 1px rgba(55, 53, 47, 0.3);
+    }
+
+    .color-picker-wrapper {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    #colorPicker {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+    }
+
+    #colorPicker::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    #colorPicker::-webkit-color-swatch {
+      border-radius: 4px;
+      border: 1px solid rgba(55, 53, 47, 0.16);
+    }
+
+    .bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .size-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .size-label {
+      color: rgba(55, 53, 47, 0.65);
+      font-size: 11px;
+    }
+
+    .size-btn {
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 4px;
+      background: rgba(55, 53, 47, 0.06);
+      color: rgb(55, 53, 47);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .size-btn svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+
+    .size-btn:hover {
+      background: rgba(55, 53, 47, 0.1);
+    }
+
+    .size-display {
+      color: rgb(55, 53, 47);
+      font-size: 11px;
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .action-btn svg {
+      width: 12px;
+      height: 12px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .action-btn.primary {
+      background: rgb(35, 131, 226);
+      color: #fff;
+    }
+
+    .action-btn.primary:hover {
+      background: rgb(0, 119, 212);
+    }
+
+    .action-btn.secondary {
+      background: rgba(55, 53, 47, 0.06);
+      color: rgb(55, 53, 47);
+    }
+
+    .action-btn.secondary:hover {
+      background: rgba(55, 53, 47, 0.1);
+    }
+
+    /* Tooltip */
+    .tool-btn[data-tooltip] {
+      position: relative;
+    }
+
+    .tool-btn[data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgb(55, 53, 47);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 10;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .container {
+        background: rgb(37, 37, 37);
+      }
+
+      .title {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .tool-btn {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .tool-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .tool-btn.active {
+        background: rgb(35, 131, 226);
+        color: #fff;
+      }
+
+      .canvas-wrapper {
+        background: rgb(47, 47, 47);
+        border-color: rgba(255, 255, 255, 0.09);
+      }
+
+      #pixelCanvas {
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .pixel {
+        background: rgb(47, 47, 47);
+      }
+
+      .size-label {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .size-btn {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .size-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .size-display {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .action-btn.secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .action-btn.secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      #colorPicker::-webkit-color-swatch {
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 320px) {
+      .color-swatch {
+        width: 16px;
+        height: 16px;
+      }
+      .color-picker-wrapper {
+        width: 16px;
+        height: 16px;
+      }
+      .action-btn span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="title">Pixel Canvas</span>
+      <div class="tools">
+        <button class="tool-btn active" id="drawTool" data-tooltip="Draw (B)">
+          <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        </button>
+        <button class="tool-btn" id="eraserTool" data-tooltip="Eraser (E)">
+          <svg viewBox="0 0 24 24"><path d="M7 21h10"/><path d="M5.5 13.5L12 7l6.5 6.5a2.12 2.12 0 0 1 0 3L16 19H8l-2.5-2.5a2.12 2.12 0 0 1 0-3z"/></svg>
+        </button>
+        <button class="tool-btn" id="fillTool" data-tooltip="Fill (G)">
+          <svg viewBox="0 0 24 24"><path d="M19 11V9a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M12 11V3"/><path d="M9 6l3-3 3 3"/><path d="M17 21a4 4 0 0 0 0-8 5 5 0 0 0-5 5 4 4 0 0 0 5 3z" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="tool-btn" id="undoBtn" data-tooltip="Undo (⌘Z)">
+          <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <div id="pixelCanvas"></div>
+    </div>
+
+    <div class="color-section">
+      <div class="palette" id="palette"></div>
+      <div class="color-picker-wrapper">
+        <input type="color" id="colorPicker" value="#2383e2" title="Custom color">
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="size-controls">
+        <span class="size-label">Grid</span>
+        <button class="size-btn" id="sizeDown">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+        </button>
+        <span class="size-display" id="sizeDisplay">16×16</span>
+        <button class="size-btn" id="sizeUp">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        </button>
+      </div>
+      <div class="actions">
+        <button class="action-btn secondary" id="clearBtn">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+          <span>Clear</span>
+        </button>
+        <button class="action-btn primary" id="downloadBtn">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Save</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Notion's saturated color palette only
+    const colors = [
+      'rgb(227, 226, 224)', // Light gray
+      'rgb(155, 154, 151)', // Gray
+      'rgb(100, 71, 58)',   // Brown
+      'rgb(217, 115, 13)',  // Orange
+      'rgb(203, 145, 47)',  // Yellow
+      'rgb(68, 131, 97)',   // Green
+      'rgb(35, 131, 226)',  // Blue
+      'rgb(103, 36, 222)',  // Purple
+      'rgb(173, 26, 114)',  // Pink
+      'rgb(212, 76, 71)',   // Red
+      'rgb(255, 255, 255)', // White
+      'rgb(55, 53, 47)',    // Black
+    ];
+
+    // Light colors that need dark border when selected
+    const lightColors = [
+      'rgb(227, 226, 224)',
+      'rgb(255, 255, 255)',
+    ];
+
+    let gridSize = 16;
+    let currentColor = colors[6]; // Blue default
+    let currentTool = 'draw';
+    let isDrawing = false;
+    let history = [];
+    let maxHistory = 50;
+    
+    // Detect dark mode
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const defaultPixelColor = isDarkMode ? 'rgb(47, 47, 47)' : 'rgb(255, 255, 255)';
+
+    const canvas = document.getElementById('pixelCanvas');
+    const palette = document.getElementById('palette');
+    const colorPicker = document.getElementById('colorPicker');
+    const sizeDisplay = document.getElementById('sizeDisplay');
+
+    // Initialize palette
+    function initPalette() {
+      palette.innerHTML = '';
+      colors.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch' + (color === currentColor ? ' active' : '');
+        if (lightColors.includes(color)) {
+          swatch.classList.add('light-color');
+        }
+        swatch.style.background = color;
+        swatch.addEventListener('click', () => selectColor(color, swatch));
+        palette.appendChild(swatch);
+      });
+    }
+
+    function selectColor(color, element) {
+      currentColor = color;
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      if (element) element.classList.add('active');
+      
+      // Convert rgb to hex for color picker
+      const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      if (rgbMatch) {
+        const hex = '#' + [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
+          .map(x => parseInt(x).toString(16).padStart(2, '0'))
+          .join('');
+        colorPicker.value = hex;
+      }
+      
+      // Switch to draw tool when selecting a color
+      if (currentTool === 'eraser') {
+        setTool('draw');
+      }
+    }
+
+    colorPicker.addEventListener('input', (e) => {
+      currentColor = e.target.value;
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    });
+
+    // Initialize canvas
+    function initCanvas() {
+      canvas.innerHTML = '';
+      canvas.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+      
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        const pixel = document.createElement('div');
+        pixel.className = 'pixel';
+        pixel.dataset.index = i;
+        pixel.dataset.color = defaultPixelColor;
+        
+        pixel.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          isDrawing = true;
+          saveState();
+          applyTool(pixel);
+        });
+        
+        pixel.addEventListener('mouseenter', () => {
+          if (isDrawing) applyTool(pixel);
+        });
+        
+        pixel.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          isDrawing = true;
+          saveState();
+          applyTool(pixel);
+        });
+        
+        pixel.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const element = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (element && element.classList.contains('pixel')) {
+            applyTool(element);
+          }
+        });
+        
+        canvas.appendChild(pixel);
+      }
+    }
+
+    document.addEventListener('mouseup', () => isDrawing = false);
+    document.addEventListener('touchend', () => isDrawing = false);
+
+    function applyTool(pixel) {
+      if (currentTool === 'draw') {
+        pixel.style.background = currentColor;
+        pixel.dataset.color = currentColor;
+      } else if (currentTool === 'eraser') {
+        pixel.style.background = defaultPixelColor;
+        pixel.dataset.color = defaultPixelColor;
+      } else if (currentTool === 'fill') {
+        floodFill(parseInt(pixel.dataset.index), pixel.dataset.color, currentColor);
+      }
+    }
+
+    function floodFill(index, targetColor, fillColor) {
+      if (targetColor === fillColor) return;
+      
+      const pixels = document.querySelectorAll('.pixel');
+      const visited = new Set();
+      const stack = [index];
+      
+      while (stack.length > 0) {
+        const i = stack.pop();
+        if (visited.has(i)) continue;
+        if (i < 0 || i >= gridSize * gridSize) continue;
+        
+        const pixel = pixels[i];
+        if (pixel.dataset.color !== targetColor) continue;
+        
+        visited.add(i);
+        pixel.style.background = fillColor;
+        pixel.dataset.color = fillColor;
+        
+        const row = Math.floor(i / gridSize);
+        const col = i % gridSize;
+        
+        if (col > 0) stack.push(i - 1);
+        if (col < gridSize - 1) stack.push(i + 1);
+        if (row > 0) stack.push(i - gridSize);
+        if (row < gridSize - 1) stack.push(i + gridSize);
+      }
+    }
+
+    // Tool selection
+    function setTool(tool) {
+      currentTool = tool;
+      document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tool + 'Tool')?.classList.add('active');
+      if (tool === 'draw') document.getElementById('drawTool').classList.add('active');
+    }
+
+    document.getElementById('drawTool').addEventListener('click', () => setTool('draw'));
+    document.getElementById('eraserTool').addEventListener('click', () => setTool('eraser'));
+    document.getElementById('fillTool').addEventListener('click', () => setTool('fill'));
+
+    // History (Undo)
+    function saveState() {
+      const pixels = document.querySelectorAll('.pixel');
+      const state = Array.from(pixels).map(p => p.dataset.color);
+      history.push(state);
+      if (history.length > maxHistory) history.shift();
+    }
+
+    function undo() {
+      if (history.length === 0) return;
+      const state = history.pop();
+      const pixels = document.querySelectorAll('.pixel');
+      pixels.forEach((pixel, i) => {
+        pixel.style.background = state[i];
+        pixel.dataset.color = state[i];
+      });
+    }
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+
+    // Size controls
+    document.getElementById('sizeUp').addEventListener('click', () => {
+      if (gridSize < 32) {
+        gridSize += 4;
+        sizeDisplay.textContent = `${gridSize}×${gridSize}`;
+        initCanvas();
+        history = [];
+      }
+    });
+
+    document.getElementById('sizeDown').addEventListener('click', () => {
+      if (gridSize > 8) {
+        gridSize -= 4;
+        sizeDisplay.textContent = `${gridSize}×${gridSize}`;
+        initCanvas();
+        history = [];
+      }
+    });
+
+    // Clear canvas
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      saveState();
+      document.querySelectorAll('.pixel').forEach(pixel => {
+        pixel.style.background = defaultPixelColor;
+        pixel.dataset.color = defaultPixelColor;
+      });
+    });
+
+    // Download as PNG
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const scale = 16;
+      const downloadCanvas = document.createElement('canvas');
+      downloadCanvas.width = gridSize * scale;
+      downloadCanvas.height = gridSize * scale;
+      const ctx = downloadCanvas.getContext('2d');
+      
+      const pixels = document.querySelectorAll('.pixel');
+      pixels.forEach((pixel, i) => {
+        const x = (i % gridSize) * scale;
+        const y = Math.floor(i / gridSize) * scale;
+        ctx.fillStyle = pixel.dataset.color;
+        ctx.fillRect(x, y, scale, scale);
+      });
+      
+      const link = document.createElement('a');
+      link.download = 'pixel-art.png';
+      link.href = downloadCanvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if (e.key === 'b') setTool('draw');
+      if (e.key === 'e') setTool('eraser');
+      if (e.key === 'g') setTool('fill');
+    });
+
+    // Initialize
+    initPalette();
+    initCanvas();
+  </script>
+</body>
+</html>
