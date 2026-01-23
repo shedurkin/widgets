@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ambient Soundscape Mixer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: transparent;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8px;
+    }
+
+    .container {
+      background: rgb(247, 247, 245);
+      border-radius: 8px;
+      padding: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      color: rgb(55, 53, 47);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .master-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .control-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(55, 53, 47, 0.06);
+      color: rgb(55, 53, 47);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .control-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .control-btn:hover {
+      background: rgba(55, 53, 47, 0.1);
+    }
+
+    .control-btn.active {
+      background: rgb(35, 131, 226);
+      color: #fff;
+    }
+
+    .control-btn.muted {
+      background: rgb(212, 76, 71);
+      color: #fff;
+    }
+
+    .sounds-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .sound-card {
+      background: rgb(255, 255, 255);
+      border-radius: 6px;
+      padding: 10px;
+      border: 1px solid rgba(55, 53, 47, 0.09);
+      transition: all 0.15s ease;
+    }
+
+    .sound-card.active {
+      border-color: rgb(35, 131, 226);
+      box-shadow: 0 0 0 1px rgb(35, 131, 226);
+    }
+
+    .sound-card.loading .sound-icon {
+      opacity: 0.5;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 0.8; }
+    }
+
+    .sound-card.error .sound-icon {
+      background: rgba(212, 76, 71, 0.1);
+      color: rgb(212, 76, 71);
+    }
+
+    .sound-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .sound-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(55, 53, 47, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgb(55, 53, 47);
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .sound-icon svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sound-icon:hover {
+      background: rgba(55, 53, 47, 0.1);
+    }
+
+    .sound-card.active .sound-icon {
+      background: rgb(35, 131, 226);
+      color: #fff;
+    }
+
+    .sound-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgb(55, 53, 47);
+    }
+
+    .sound-slider-container {
+      position: relative;
+      height: 6px;
+      background: rgba(55, 53, 47, 0.09);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .sound-slider-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: rgb(35, 131, 226);
+      border-radius: 3px;
+      transition: width 0.1s ease;
+    }
+
+    .sound-card:not(.active) .sound-slider-fill {
+      background: rgba(55, 53, 47, 0.2);
+    }
+
+    .sound-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .master-volume {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 8px 10px;
+      background: rgb(255, 255, 255);
+      border-radius: 6px;
+      border: 1px solid rgba(55, 53, 47, 0.09);
+    }
+
+    .master-label {
+      font-size: 11px;
+      color: rgba(55, 53, 47, 0.65);
+      flex-shrink: 0;
+    }
+
+    .master-slider-container {
+      flex: 1;
+      position: relative;
+      height: 6px;
+      background: rgba(55, 53, 47, 0.09);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .master-slider-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      background: rgb(55, 53, 47);
+      border-radius: 3px;
+      transition: width 0.1s ease;
+    }
+
+    .master-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .master-value {
+      font-size: 11px;
+      color: rgb(55, 53, 47);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .container {
+        background: rgb(37, 37, 37);
+      }
+
+      .title {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .control-btn {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .control-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .control-btn.active {
+        background: rgb(35, 131, 226);
+        color: #fff;
+      }
+
+      .sound-card {
+        background: rgb(47, 47, 47);
+        border-color: rgba(255, 255, 255, 0.09);
+      }
+
+      .sound-card.active {
+        border-color: rgb(35, 131, 226);
+      }
+
+      .sound-icon {
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .sound-icon:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .sound-name {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .sound-slider-container {
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .sound-card:not(.active) .sound-slider-fill {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .master-volume {
+        background: rgb(47, 47, 47);
+        border-color: rgba(255, 255, 255, 0.09);
+      }
+
+      .master-label {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .master-slider-container {
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .master-slider-fill {
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .master-value {
+        color: rgba(255, 255, 255, 0.9);
+      }
+    }
+
+    @media (max-width: 300px) {
+      .sounds-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="title">Soundscape</span>
+      <div class="master-controls">
+        <button class="control-btn" id="muteBtn" title="Mute all">
+          <svg viewBox="0 0 24 24" id="muteIcon">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+        </button>
+        <button class="control-btn" id="resetBtn" title="Reset all">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="sounds-grid" id="soundsGrid"></div>
+
+    <div class="master-volume">
+      <span class="master-label">Master</span>
+      <div class="master-slider-container">
+        <div class="master-slider-fill" id="masterFill"></div>
+        <input type="range" class="master-slider" id="masterSlider" min="0" max="100" value="80">
+      </div>
+      <span class="master-value" id="masterValue">80%</span>
+    </div>
+  </div>
+
+  <script>
+    // Sound definitions - audio files should be in the same folder as this HTML file
+    // Update the 'url' values to match your hosted file locations
+    const sounds = [
+      {
+        id: 'rain',
+        name: 'Rain',
+        icon: `<svg viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>`,
+        url: 'rain.mp3'
+      },
+      {
+        id: 'thunder',
+        name: 'Thunder',
+        icon: `<svg viewBox="0 0 24 24"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/><path d="M13 12l-3 5h4l-3 5"/></svg>`,
+        url: 'thunder.mp3'
+      }
+    ];
+
+    let audioElements = {};
+    let volumes = {};
+    let masterVolume = 0.8;
+    let isMuted = false;
+
+    const soundsGrid = document.getElementById('soundsGrid');
+    const masterSlider = document.getElementById('masterSlider');
+    const masterFill = document.getElementById('masterFill');
+    const masterValue = document.getElementById('masterValue');
+    const muteBtn = document.getElementById('muteBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Initialize sounds
+    function initSounds() {
+      sounds.forEach(sound => {
+        // Create audio element
+        const audio = new Audio();
+        audio.loop = true;
+        audio.volume = 0;
+        audio.preload = 'metadata';
+        audio.src = sound.url;
+        audioElements[sound.id] = audio;
+        volumes[sound.id] = 0;
+
+        // Handle audio events
+        audio.addEventListener('error', (e) => {
+          const card = document.getElementById(`card-${sound.id}`);
+          card.classList.remove('loading');
+          card.classList.add('error');
+          console.log(`Failed to load: ${sound.name}`, e);
+        });
+
+        audio.addEventListener('canplaythrough', () => {
+          const card = document.getElementById(`card-${sound.id}`);
+          card.classList.remove('loading');
+        });
+
+        audio.addEventListener('loadstart', () => {
+          const card = document.getElementById(`card-${sound.id}`);
+          if (volumes[sound.id] > 0) {
+            card.classList.add('loading');
+          }
+        });
+
+        // Create UI card
+        const card = document.createElement('div');
+        card.className = 'sound-card';
+        card.id = `card-${sound.id}`;
+        card.innerHTML = `
+          <div class="sound-header">
+            <div class="sound-icon" id="icon-${sound.id}">
+              ${sound.icon}
+            </div>
+            <span class="sound-name">${sound.name}</span>
+          </div>
+          <div class="sound-slider-container">
+            <div class="sound-slider-fill" id="fill-${sound.id}"></div>
+            <input type="range" class="sound-slider" id="slider-${sound.id}" min="0" max="100" value="0">
+          </div>
+        `;
+        soundsGrid.appendChild(card);
+
+        // Set up event listeners
+        const slider = document.getElementById(`slider-${sound.id}`);
+        const fill = document.getElementById(`fill-${sound.id}`);
+        const icon = document.getElementById(`icon-${sound.id}`);
+
+        slider.addEventListener('input', (e) => {
+          const value = parseInt(e.target.value);
+          volumes[sound.id] = value / 100;
+          fill.style.width = `${value}%`;
+          updateAudio(sound.id);
+          updateCardState(sound.id);
+        });
+
+        icon.addEventListener('click', () => {
+          const card = document.getElementById(`card-${sound.id}`);
+          if (card.classList.contains('error')) return;
+          
+          if (volumes[sound.id] > 0) {
+            // Turn off
+            volumes[sound.id] = 0;
+            slider.value = 0;
+            fill.style.width = '0%';
+          } else {
+            // Turn on at 50%
+            volumes[sound.id] = 0.5;
+            slider.value = 50;
+            fill.style.width = '50%';
+          }
+          updateAudio(sound.id);
+          updateCardState(sound.id);
+        });
+      });
+
+      // Master volume
+      masterFill.style.width = '80%';
+      masterSlider.addEventListener('input', (e) => {
+        masterVolume = parseInt(e.target.value) / 100;
+        masterFill.style.width = `${e.target.value}%`;
+        masterValue.textContent = `${e.target.value}%`;
+        updateAllAudio();
+      });
+
+      // Mute button
+      muteBtn.addEventListener('click', toggleMute);
+
+      // Reset button
+      resetBtn.addEventListener('click', resetAll);
+    }
+
+    function updateAudio(soundId) {
+      const audio = audioElements[soundId];
+      const effectiveVolume = isMuted ? 0 : volumes[soundId] * masterVolume;
+      
+      if (volumes[soundId] > 0 && !isMuted) {
+        if (audio.paused) {
+          const card = document.getElementById(`card-${soundId}`);
+          card.classList.add('loading');
+          audio.play().then(() => {
+            card.classList.remove('loading');
+          }).catch(e => {
+            console.log('Audio play failed:', e);
+            card.classList.remove('loading');
+            card.classList.add('error');
+          });
+        }
+        audio.volume = effectiveVolume;
+      } else {
+        audio.volume = 0;
+        if (volumes[soundId] === 0) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      }
+    }
+
+    function updateAllAudio() {
+      sounds.forEach(sound => updateAudio(sound.id));
+    }
+
+    function updateCardState(soundId) {
+      const card = document.getElementById(`card-${soundId}`);
+      if (volumes[soundId] > 0) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      muteBtn.classList.toggle('muted', isMuted);
+      
+      // Update icon
+      const muteIcon = document.getElementById('muteIcon');
+      if (isMuted) {
+        muteIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <line x1="22" y1="9" x2="16" y2="15"/>
+          <line x1="16" y1="9" x2="22" y2="15"/>
+        `;
+      } else {
+        muteIcon.innerHTML = `
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        `;
+      }
+      
+      updateAllAudio();
+    }
+
+    function resetAll() {
+      sounds.forEach(sound => {
+        volumes[sound.id] = 0;
+        const slider = document.getElementById(`slider-${sound.id}`);
+        const fill = document.getElementById(`fill-${sound.id}`);
+        slider.value = 0;
+        fill.style.width = '0%';
+        updateAudio(sound.id);
+        updateCardState(sound.id);
+      });
+    }
+
+    // Handle visibility change to pause/resume audio
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        sounds.forEach(sound => {
+          if (volumes[sound.id] > 0) {
+            audioElements[sound.id].pause();
+          }
+        });
+      } else {
+        sounds.forEach(sound => {
+          if (volumes[sound.id] > 0 && !isMuted) {
+            audioElements[sound.id].play().catch(e => console.log('Audio play failed:', e));
+          }
+        });
+      }
+    });
+
+    // Initialize
+    initSounds();
+  </script>
+</body>
+</html>
